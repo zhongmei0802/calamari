@@ -324,7 +324,9 @@ class ServerMonitor(greenlet.Greenlet):
             services = {mon['name']: {'fsid':
                                       mon_map['fsid'],
                                       'type': 'mon',
-                                      'status': '{}',
+                                      'status': {'election_epoch': mon_map['epoch'],
+                                                 'quorum': mon_map['quorum'],
+                                                 'rank': mon['rank']},
                                       'id': mon['name']}}
 
             self.on_server_heartbeat(mon['name'], {'boot_time': 0,
