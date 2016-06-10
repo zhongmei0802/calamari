@@ -173,9 +173,8 @@ class ServerMonitor(greenlet.Greenlet):
         osd_tree = osd_map['tree']
         nodes_by_id = dict((n["id"], n) for n in osd_tree["nodes"])
 
-        host_to_osd = defaultdict(list)
-
         osd_id_to_host = {}
+        host_to_osd = defaultdict(list)
 
         def find_descendants(cursor, fn):
             if fn(cursor):
@@ -186,18 +185,12 @@ class ServerMonitor(greenlet.Greenlet):
                     found.extend(find_descendants(nodes_by_id[child_id], fn))
                 return found
 
-        # This assumes that:
-        # - The host and OSD types exist and have the names set
-        #   in CRUSH_HOST_TYPE and CRUSH_OSD_TYPE
-        # - That OSDs are descendents of hosts
-        # - That hosts have the 'name' attribute set to their hostname
-        # - That OSDs have the 'name' attribute set to osd.<osd id>
-        # - That OSDs are not descendents of OSDs
-        for node in osd_tree["nodes"]:
-            if node["type"] == CRUSH_HOST_TYPE:
-                host = node["name"]
-                for osd in find_descendants(node, lambda c: c['type'] == CRUSH_OSD_TYPE):
-                    osd_id_to_host[osd["id"]] = host
+        osd_metadata = osd_map.get('osd_metadata', [])
+        if not osd_metadata:
+            log.error("get_hostname_to_osds unable to get osd_metadata")
+
+        for osd in osd_metadata:
+                osd_id_to_host[osd['id']] = osd['hostname']
 
         for osd in osd_map['osds']:
             try:
@@ -245,7 +238,7 @@ class ServerMonitor(greenlet.Greenlet):
         log.debug("ServerMonitor.on_osd_map: epoch %s" % osd_map['epoch'])
 
         hostname_to_osds = self.get_hostname_to_osds(osd_map)
-        log.debug("ServerMonitor.on_osd_map: got service data for %s servers" % len(hostname_to_osds))
+        log.error("ServerMonitor.on_osd_map: got service data for %s servers" % len(hostname_to_osds))
 
         osds_in_map = set()
         for hostname, osds in hostname_to_osds.items():
